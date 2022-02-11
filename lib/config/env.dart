@@ -60,7 +60,7 @@ class Env {
   static const String extrinsicFailedEvent = "ExtrinsicFailed";
   static const String approved = "Approved";
   static const String peaqTestnet = "wss://fn1.test.peaq.network";
-  // static const String peaqTestnet = "wss://98e0-197-210-70-213.ngrok.io";
+  // static const String peaqTestnet = "wss://c14a-102-91-4-52.ngrok.io";
   static const String scaleCodecBaseURL = "https://codec.test.peaq.network";
   // static const String scaleCodecBaseURL =
   // "https:///955c-197-210-70-117.ngrok.io";

@@ -1,6 +1,13 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ffi';
+import 'dart:async';
+
 import 'package:charmev/common/models/enum.dart';
 import 'package:charmev/common/providers/account_provider.dart';
 import 'package:charmev/common/providers/charge_provider.dart';
+import 'package:charmev/common/services/fr_bridge/bridge_generated.dart';
 import 'package:charmev/common/widgets/dropdown.dart';
 import 'package:charmev/common/widgets/loading_view.dart';
 import 'package:charmev/common/widgets/status_card.dart';
@@ -13,11 +20,23 @@ import 'package:flutter/cupertino.dart';
 import 'package:scan/scan.dart';
 
 import 'package:charmev/common/widgets/buttons.dart';
-import 'package:charmev/common/widgets/dialog.dart';
 import 'package:charmev/common/widgets/custom_shapes.dart';
 import 'package:charmev/config/env.dart';
-import 'package:charmev/assets.dart';
 import 'package:provider/provider.dart' as provider;
+
+const base = 'peaq_codec_api';
+final path = Platform.isWindows
+    ? '$base.dll'
+    : Platform.isMacOS
+        ? 'lib$base.dylib'
+        : 'lib$base.so';
+late final dylib =
+    Platform.isIOS ? DynamicLibrary.process() : DynamicLibrary.open(path);
+
+late final api = PeaqCodecApiImpl(dylib);
+
+void runPeriodically(void Function() callback) =>
+    Timer.periodic(const Duration(milliseconds: 3000), (timer) => callback());
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({this.page, Key? key}) : super(key: key);
@@ -35,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen>
   String qrcode = 'Unknown';
 
   CEVChargeProvider? _dumbChargeProvider;
+  Uint8List? storageData;
 
   @override
   void initState() {
@@ -47,6 +67,18 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void dispose() {
     super.dispose();
+  }
+
+  Future<void> _callStorageFFI() async {
+    final data = await api.getStorage(url: Env.peaqTestnet);
+    String s = String.fromCharCodes(data);
+    var outputAsUint8List = Uint8List.fromList(s.codeUnits);
+    var decoded = utf8.decode(data);
+    print("Storage DATA:: $data");
+    print('Storage decoded DATA:: $decoded');
+    print("Storage outputAsUint8List DATA:: $outputAsUint8List");
+
+    if (mounted) setState(() => storageData = data);
   }
 
   @override
@@ -206,6 +238,13 @@ class _HomeScreenState extends State<HomeScreen>
                       const Text(
                         Env.scanQRCode,
                       ),
+                      CEVRaisedButton(
+                        text: "Get Storage",
+                        textColor: Colors.white,
+                        onPressed: () async {
+                          await _callStorageFFI();
+                        },
+                      )
                       // _buildImportButton(),
                     ]))));
   }

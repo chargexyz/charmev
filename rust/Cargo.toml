@@ -1,0 +1,37 @@
+[package]
+name = "peaq-codec-api"
+version = "0.0.1"
+edition = "2021"
+
+#[workspace]
+#members = [
+#	".",
+#]
+
+[lib]
+name = "peaq_codec_api"
+crate-type = ["cdylib"]
+
+[dependencies]
+anyhow = { version = "1.0.53", features = ["backtrace"] }
+keyring = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate.git", branch = "master", package = "sp-keyring" }
+flutter_rust_bridge = { version = "1.15.1" }
+serde_json = { version = "1.0"}
+log = "0.4.14"
+android_logger = "0.10"
+sp-runtime = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "master" }
+
+[dependencies.frame-metadata] 
+version = "14.0.0"
+git = "https://github.com/paritytech/frame-metadata.git" 
+branch = "main"
+features = ["v14"] 
+
+[dependencies.substrate-api-client] 
+version = "0.6.0"
+git = "https://github.com/irediaes/substrate-api-client.git"
+rev = "66fa708d3f94748c59ef1e6c81deb34eddea59c2"
+
+#[[example]]
+#name = "get_storage"
+#path = "src/examples/get_storage.rs"
