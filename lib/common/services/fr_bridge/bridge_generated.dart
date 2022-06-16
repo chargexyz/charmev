@@ -16,6 +16,8 @@ abstract class PeaqCodecApi {
 
   Future<void> connectP2P({required String url, dynamic hint});
 
+  Future<void> disconnectP2P({required String peerId, dynamic hint});
+
   Future<Uint8List> sendIdentityChallengeEvent({dynamic hint});
 
   Future<Uint8List> sendStopChargeEvent({dynamic hint});
@@ -26,8 +28,19 @@ abstract class PeaqCodecApi {
       required String tokenDeposited,
       dynamic hint});
 
+  Future<Uint8List> getAccountBalance(
+      {required String wsUrl,
+      required String tokenDecimals,
+      required String seed,
+      dynamic hint});
+
+  Future<Uint8List> generateAccount(
+      {required String wsUrl, required String secretPhrase, dynamic hint});
+
   Future<Uint8List> createMultisigAddress(
-      {required String consumer, required String provider, dynamic hint});
+      {required List<String> signatories,
+      required int threshold,
+      dynamic hint});
 
   Future<Uint8List> approveMultisig(
       {required String wsUrl,
@@ -96,6 +109,19 @@ class PeaqCodecApiImpl extends FlutterRustBridgeBase<PeaqCodecApiWire>
         hint: hint,
       ));
 
+  Future<void> disconnectP2P({required String peerId, dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) =>
+            inner.wire_disconnect_p2p(port_, _api2wire_String(peerId)),
+        parseSuccessData: _wire2api_unit,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "disconnect_p2p",
+          argNames: ["peerId"],
+        ),
+        argValues: [peerId],
+        hint: hint,
+      ));
+
   Future<Uint8List> sendIdentityChallengeEvent({dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) => inner.wire_send_identity_challenge_event(port_),
@@ -140,17 +166,55 @@ class PeaqCodecApiImpl extends FlutterRustBridgeBase<PeaqCodecApiWire>
         hint: hint,
       ));
 
+  Future<Uint8List> getAccountBalance(
+          {required String wsUrl,
+          required String tokenDecimals,
+          required String seed,
+          dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_get_account_balance(
+            port_,
+            _api2wire_String(wsUrl),
+            _api2wire_String(tokenDecimals),
+            _api2wire_String(seed)),
+        parseSuccessData: _wire2api_uint_8_list,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "get_account_balance",
+          argNames: ["wsUrl", "tokenDecimals", "seed"],
+        ),
+        argValues: [wsUrl, tokenDecimals, seed],
+        hint: hint,
+      ));
+
+  Future<Uint8List> generateAccount(
+          {required String wsUrl,
+          required String secretPhrase,
+          dynamic hint}) =>
+      executeNormal(FlutterRustBridgeTask(
+        callFfi: (port_) => inner.wire_generate_account(
+            port_, _api2wire_String(wsUrl), _api2wire_String(secretPhrase)),
+        parseSuccessData: _wire2api_uint_8_list,
+        constMeta: const FlutterRustBridgeTaskConstMeta(
+          debugName: "generate_account",
+          argNames: ["wsUrl", "secretPhrase"],
+        ),
+        argValues: [wsUrl, secretPhrase],
+        hint: hint,
+      ));
+
   Future<Uint8List> createMultisigAddress(
-          {required String consumer, required String provider, dynamic hint}) =>
+          {required List<String> signatories,
+          required int threshold,
+          dynamic hint}) =>
       executeNormal(FlutterRustBridgeTask(
         callFfi: (port_) => inner.wire_create_multisig_address(
-            port_, _api2wire_String(consumer), _api2wire_String(provider)),
+            port_, _api2wire_StringList(signatories), _api2wire_u16(threshold)),
         parseSuccessData: _wire2api_uint_8_list,
         constMeta: const FlutterRustBridgeTaskConstMeta(
           debugName: "create_multisig_address",
-          argNames: ["consumer", "provider"],
+          argNames: ["signatories", "threshold"],
         ),
-        argValues: [consumer, provider],
+        argValues: [signatories, threshold],
         hint: hint,
       ));
 
@@ -389,6 +453,23 @@ class PeaqCodecApiWire implements FlutterRustBridgeWireBase {
   late final _wire_connect_p2p = _wire_connect_p2pPtr
       .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
+  void wire_disconnect_p2p(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> peer_id,
+  ) {
+    return _wire_disconnect_p2p(
+      port_,
+      peer_id,
+    );
+  }
+
+  late final _wire_disconnect_p2pPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64,
+              ffi.Pointer<wire_uint_8_list>)>>('wire_disconnect_p2p');
+  late final _wire_disconnect_p2p = _wire_disconnect_p2pPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
+
   void wire_send_identity_challenge_event(
     int port_,
   ) {
@@ -444,26 +525,70 @@ class PeaqCodecApiWire implements FlutterRustBridgeWireBase {
           void Function(int, ffi.Pointer<wire_uint_8_list>,
               ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_uint_8_list>)>();
 
+  void wire_get_account_balance(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> ws_url,
+    ffi.Pointer<wire_uint_8_list> token_decimals,
+    ffi.Pointer<wire_uint_8_list> seed,
+  ) {
+    return _wire_get_account_balance(
+      port_,
+      ws_url,
+      token_decimals,
+      seed,
+    );
+  }
+
+  late final _wire_get_account_balancePtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(
+              ffi.Int64,
+              ffi.Pointer<wire_uint_8_list>,
+              ffi.Pointer<wire_uint_8_list>,
+              ffi.Pointer<wire_uint_8_list>)>>('wire_get_account_balance');
+  late final _wire_get_account_balance =
+      _wire_get_account_balancePtr.asFunction<
+          void Function(int, ffi.Pointer<wire_uint_8_list>,
+              ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_uint_8_list>)>();
+
+  void wire_generate_account(
+    int port_,
+    ffi.Pointer<wire_uint_8_list> ws_url,
+    ffi.Pointer<wire_uint_8_list> secret_phrase,
+  ) {
+    return _wire_generate_account(
+      port_,
+      ws_url,
+      secret_phrase,
+    );
+  }
+
+  late final _wire_generate_accountPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
+              ffi.Pointer<wire_uint_8_list>)>>('wire_generate_account');
+  late final _wire_generate_account = _wire_generate_accountPtr.asFunction<
+      void Function(
+          int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_uint_8_list>)>();
+
   void wire_create_multisig_address(
     int port_,
-    ffi.Pointer<wire_uint_8_list> consumer,
-    ffi.Pointer<wire_uint_8_list> provider,
+    ffi.Pointer<wire_StringList> signatories,
+    int threshold,
   ) {
     return _wire_create_multisig_address(
       port_,
-      consumer,
-      provider,
+      signatories,
+      threshold,
     );
   }
 
   late final _wire_create_multisig_addressPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_create_multisig_address');
-  late final _wire_create_multisig_address =
-      _wire_create_multisig_addressPtr.asFunction<
-          void Function(int, ffi.Pointer<wire_uint_8_list>,
-              ffi.Pointer<wire_uint_8_list>)>();
+          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_StringList>,
+              ffi.Uint16)>>('wire_create_multisig_address');
+  late final _wire_create_multisig_address = _wire_create_multisig_addressPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_StringList>, int)>();
 
   void wire_approve_multisig(
     int port_,

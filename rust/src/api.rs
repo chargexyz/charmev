@@ -22,6 +22,13 @@ pub fn connect_p2p(url: String) -> Result<()> {
     Ok(())
 }
 
+// unsubscribe and disconnect from a p2p peer connection
+pub fn disconnect_p2p(peer_id: String) -> Result<()> {
+    trace!("\n\n P2P PEEER ID ON RUST {}", peer_id);
+    request::disconnect_p2p(peer_id).unwrap();
+    Ok(())
+}
+
 // Send Identity Challenge event to provider peer
 pub fn send_identity_challenge_event() -> Result<Vec<u8>> {
     let res = request::send_identity_challenge_event().unwrap();
@@ -44,9 +51,24 @@ pub fn send_service_requested_event(
     Ok(res)
 }
 
+// get balance of an account
+pub fn get_account_balance(
+    ws_url: String,
+    token_decimals: String,
+    seed: String,
+) -> Result<Vec<u8>> {
+    let res = request::get_account_balance(ws_url, token_decimals, seed).unwrap();
+    Ok(res)
+}
+
+pub fn generate_account(ws_url: String, secret_phrase: String) -> Result<Vec<u8>> {
+    let res = request::generate_account(ws_url, secret_phrase).unwrap();
+    Ok(res)
+}
+
 // Creates a multi signature wallet address
-pub fn create_multisig_address(consumer: String, provider: String) -> Result<Vec<u8>> {
-    let res = request::create_multisig_wallet(consumer, provider).unwrap();
+pub fn create_multisig_address(signatories: Vec<String>, threshold: u16) -> Result<Vec<u8>> {
+    let res = request::create_multisig_wallet(signatories, threshold).unwrap();
     Ok(res)
 }
 

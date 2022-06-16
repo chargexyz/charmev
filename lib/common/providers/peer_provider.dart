@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'dart:ffi';
 import 'dart:async';
 
+import 'package:charmev/common/models/account.dart';
 import 'package:charmev/common/models/detail.dart';
 import 'package:charmev/common/models/rust_data.dart';
 import 'package:charmev/common/utils/pref_storage.dart';
@@ -33,7 +34,7 @@ late final dylib =
 
 late final api = PeaqCodecApiImpl(dylib);
 
-void runPeriodically(void Function() callback) =>
+Timer runPeriodically(void Function() callback) =>
     Timer.periodic(const Duration(milliseconds: 1000), (timer) => callback());
 
 class CEVPeerProvider with ChangeNotifier {
@@ -52,10 +53,12 @@ class CEVPeerProvider with ChangeNotifier {
   LoadingStatus _status = LoadingStatus.idle;
   String _error = '';
   String _statusMessage = '';
+  String _peerId = '';
   double _chargeProgress = 0;
   bool _isLoggedIn = false;
   bool _showNodeDropdown = false;
   List<Detail> _details = [];
+  Timer? _runningLoop;
 
   String _identityChallengeData = '';
   String _p2pURL = '';
@@ -86,8 +89,15 @@ class CEVPeerProvider with ChangeNotifier {
           .setStatus(LoadingStatus.error, message: Env.invalidP2PUrl);
     }
 
+    _peerId = splitURL.last;
+
     api.connectP2P(url: _p2pURL);
-    runPeriodically(getEvent);
+    _runningLoop = runPeriodically(getEvent);
+  }
+
+  Future<void> disconnectP2P() async {
+    await api.disconnectP2P(peerId: _peerId);
+    _runningLoop!.cancel();
   }
 
   Future<void> getEvent() async {
@@ -126,6 +136,7 @@ class CEVPeerProvider with ChangeNotifier {
             if (!err) {
               _processServiceRequestedAckEvent();
             } else {
+              disconnectP2P();
               appProvider.chargeProvider.setStatus(LoadingStatus.error,
                   message: Env.providerRejectService +
                       ": " +
@@ -142,6 +153,7 @@ class CEVPeerProvider with ChangeNotifier {
           }
         case msg.EventType.PEER_CONNECTION_FAILED:
           {
+            disconnectP2P();
             _isPeerConnected = false;
             appProvider.chargeProvider.setStatus(LoadingStatus.error,
                 message: Env.unableToConnectToPeer);
@@ -316,8 +328,8 @@ class CEVPeerProvider with ChangeNotifier {
   Future<bool> creatMultisigAddress(String provider, String consumer) async {
     // print("creatMultisigAddress hitts");
 
-    var data =
-        await api.createMultisigAddress(provider: provider, consumer: consumer);
+    var data = await api
+        .createMultisigAddress(signatories: [provider, consumer], threshold: 2);
 
     var utf8Res = utf8.decode(data);
     var decodedRes = json.decode(utf8Res);
@@ -409,6 +421,44 @@ class CEVPeerProvider with ChangeNotifier {
       notifyListeners();
     }
     return didDoc;
+  }
+
+  Future<CEVAccount> generateAccount(String secretPhrase) async {
+    CEVAccount account = CEVAccount();
+    var data = await api.generateAccount(
+        wsUrl: Env.peaqTestnet, secretPhrase: secretPhrase);
+
+    String s = String.fromCharCodes(data);
+    var utf8Res = utf8.decode(data);
+    var decodedRes = json.decode(utf8Res);
+
+    if (!decodedRes["error"]) {
+      // decode account data
+      var accData = decodedRes["data"];
+      List<int> docRawData = List<int>.from(accData);
+      var utf8ResData = utf8.decode(docRawData);
+      // print("Account utf8ResData:: $utf8ResData");
+      var decodedResData = json.decode(utf8ResData);
+
+      // print("Account data:: $decodedResData");
+
+      account = accountFromJson(json.encode(decodedResData));
+    }
+    return account;
+  }
+
+  Future<String> getAccountBalance(String tokenDecimals, String seed) async {
+    var data = await api.getAccountBalance(
+        wsUrl: Env.peaqTestnet, tokenDecimals: tokenDecimals, seed: seed);
+
+    var utf8Res = utf8.decode(data);
+    var decodedRes = json.decode(utf8Res);
+
+    var accData = decodedRes["data"];
+    List<int> docRawData = List<int>.from(accData);
+    var utf8ResData = utf8.decode(docRawData);
+
+    return utf8ResData;
   }
 
   _setP2PURL(List<doc.Service> services) {

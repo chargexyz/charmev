@@ -31,6 +31,14 @@ pub fn connect_p2p(url: String) -> Result<()> {
     Ok(())
 }
 
+pub fn disconnect_p2p(peer_id: String) -> Result<()> {
+    trace!("\n\n disconnect_p2p RUST hitts:: p2p peer_id = {}", peer_id);
+
+    behaviour::disconnect(peer_id).expect("p2p disconnection failed");
+
+    Ok(())
+}
+
 // get events from the the global variable
 pub fn get_event() -> Result<Vec<u8>> {
     trace!("\n\n RUST - get_event  hitts");
@@ -51,8 +59,59 @@ pub fn get_event() -> Result<Vec<u8>> {
     Ok(res_data)
 }
 
+// get balance of an account
+pub fn get_account_balance(
+    ws_url: String,
+    token_decimals: String,
+    seed: String,
+) -> Result<Vec<u8>> {
+    trace!("\n\n RUST - get_account_balance  hitts");
+
+    let mut res = ResponseData {
+        error: false,
+        message: "".to_string(),
+        data: vec![],
+    };
+
+    let token_decimals = u128::from_str(&token_decimals).expect("failed to fetch account balance");
+
+    let bal = chain::get_account_balance(ws_url, token_decimals, seed);
+    res.data = bal.to_string().as_bytes().to_vec();
+
+    let res_data = serde_json::to_vec(&res).expect("Failed to write result data to byte");
+    Ok(res_data)
+}
+
+pub fn generate_account(ws_url: String, secret_phrase: String) -> Result<Vec<u8>> {
+    trace!("\n\n RUST - generate_account hitts");
+
+    let ev_res = chain::generate_account(&ws_url.as_str(), &secret_phrase.as_str()).unwrap();
+
+    let mut res = ResponseData {
+        error: false,
+        message: "Account Generated".to_string(),
+        data: vec![],
+    };
+
+    match ev_res {
+        chain::AccountResult::Error(err) => {
+            // return the error data if account error occurred
+            res.error = true;
+            res.message = err;
+            let res_data = serde_json::to_vec(&res).expect("Failed to write result data to byte");
+            Ok(res_data)
+        }
+        chain::AccountResult::Success(account) => {
+            res.data =
+                serde_json::to_vec(&account).expect("Failed to convert account data to bytes");
+            let res_data = serde_json::to_vec(&res).expect("Failed to write result data to byte");
+            Ok(res_data)
+        }
+    }
+}
+
 // create multisig account
-pub fn create_multisig_wallet(consumer: String, provider: String) -> Result<Vec<u8>> {
+pub fn create_multisig_wallet(signatories: Vec<String>, threshold: u16) -> Result<Vec<u8>> {
     trace!("\n\n RUST - get_event  hitts");
 
     let mut res = ResponseData {
@@ -61,7 +120,7 @@ pub fn create_multisig_wallet(consumer: String, provider: String) -> Result<Vec<
         data: vec![],
     };
 
-    let address = utils::create_multisig_account(consumer.as_str(), &provider.as_str());
+    let address = utils::create_multisig_account(signatories, threshold);
     res.error = false;
     res.message = "Event Found".to_string();
     res.data = address.as_bytes().to_vec();

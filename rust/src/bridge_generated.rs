@@ -41,6 +41,21 @@ pub extern "C" fn wire_connect_p2p(port_: i64, url: *mut wire_uint_8_list) {
 }
 
 #[no_mangle]
+pub extern "C" fn wire_disconnect_p2p(port_: i64, peer_id: *mut wire_uint_8_list) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "disconnect_p2p",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_peer_id = peer_id.wire2api();
+            move |task_callback| disconnect_p2p(api_peer_id)
+        },
+    )
+}
+
+#[no_mangle]
 pub extern "C" fn wire_send_identity_challenge_event(port_: i64) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
@@ -89,10 +104,52 @@ pub extern "C" fn wire_send_service_requested_event(
 }
 
 #[no_mangle]
+pub extern "C" fn wire_get_account_balance(
+    port_: i64,
+    ws_url: *mut wire_uint_8_list,
+    token_decimals: *mut wire_uint_8_list,
+    seed: *mut wire_uint_8_list,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "get_account_balance",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_ws_url = ws_url.wire2api();
+            let api_token_decimals = token_decimals.wire2api();
+            let api_seed = seed.wire2api();
+            move |task_callback| get_account_balance(api_ws_url, api_token_decimals, api_seed)
+        },
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn wire_generate_account(
+    port_: i64,
+    ws_url: *mut wire_uint_8_list,
+    secret_phrase: *mut wire_uint_8_list,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "generate_account",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_ws_url = ws_url.wire2api();
+            let api_secret_phrase = secret_phrase.wire2api();
+            move |task_callback| generate_account(api_ws_url, api_secret_phrase)
+        },
+    )
+}
+
+#[no_mangle]
 pub extern "C" fn wire_create_multisig_address(
     port_: i64,
-    consumer: *mut wire_uint_8_list,
-    provider: *mut wire_uint_8_list,
+    signatories: *mut wire_StringList,
+    threshold: u16,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
@@ -101,9 +158,9 @@ pub extern "C" fn wire_create_multisig_address(
             mode: FfiCallMode::Normal,
         },
         move || {
-            let api_consumer = consumer.wire2api();
-            let api_provider = provider.wire2api();
-            move |task_callback| create_multisig_address(api_consumer, api_provider)
+            let api_signatories = signatories.wire2api();
+            let api_threshold = threshold.wire2api();
+            move |task_callback| create_multisig_address(api_signatories, api_threshold)
         },
     )
 }

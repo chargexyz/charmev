@@ -7,7 +7,6 @@ import 'package:charmev/common/models/account.dart';
 import 'package:charmev/common/providers/application_provider.dart';
 import 'package:provider/provider.dart' as provider;
 
-import 'package:substrate_sign_flutter/substrate_sign_flutter.dart' as subsign;
 import 'dart:async';
 
 import 'package:charmev/theme.dart';
@@ -101,7 +100,8 @@ class CEVAccountProvider with ChangeNotifier {
     }
 
     _newDetails.add(
-      Detail("Balance", "103.90 PEAQ", color: CEVTheme.accentColor),
+      Detail("Balance", "${_account!.balance} ${_account!.tokenSymbol}",
+          color: CEVTheme.accentColor),
     );
     _details = _newDetails;
     if (notify) {
@@ -112,22 +112,41 @@ class CEVAccountProvider with ChangeNotifier {
   /// Generate  consumer keys
   /// Generate wallet address
   /// Save the account details in shared preference for further retrival
-  generateConsumerKeys(String secretPhrase) async {
-    String address = subsign.substrateAddress(secretPhrase, _ss58);
-    print("address: $address");
-
-    final CEVAccount acct = CEVAccount(
-        address: address, pk: "", did: "did:pq:$address", seed: secretPhrase);
-    _account = acct;
+  generateAccount(String secretPhrase) async {
+    CEVAccount account =
+        await appProvider.peerProvider.generateAccount(secretPhrase);
+    print("account: ${accountToJson(account)}");
 
     await cevSharedPref.prefs
-        .setString(Env.accountPrefKey, accountToJson(acct));
+        .setString(Env.accountPrefKey, accountToJson(account));
+
+    _account = account;
 
     generateDetails();
 
     await Future.wait([
       initBeforeOnboardingPage(),
     ]);
+
+    notifyListeners();
+
+    return;
+  }
+
+  getAccountBalance() async {
+    String balance = await appProvider.peerProvider
+        .getAccountBalance(_account!.tokenDecimals.toString(), _account!.seed!);
+    print("balance: $balance");
+
+    _account?.balance = double.parse(balance);
+    print("new account: ${accountToJson(_account!)}");
+
+    await cevSharedPref.prefs
+        .setString(Env.accountPrefKey, accountToJson(account));
+
+    _account = account;
+
+    generateDetails();
 
     notifyListeners();
 
